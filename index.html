@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Щоденник</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" id="tc" content="#e6dff1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Щоденник">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{--ink:#1c1b1a;--mute:#6d665f;--mute2:#b3aca4;--glass:rgba(255,255,255,.58);--line:rgba(255,255,255,.7);--soft:rgba(255,255,255,.65);--sheet:rgba(250,242,234,.92);--btn:#1c1b1a;--btnink:#fff;--a1:#ffb067;--a2:#ff7d12;--accd:#c25f00;--b1:#f6ebe0;--b2:#f0dccb;--b3:#ecd2bc;--glow:rgba(255,150,60,.35);--orb:1;--orbhi:#fff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;color:var(--ink);font:15px/1.4 "Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-weight:400}
+body{background:linear-gradient(170deg,var(--b1) 0%,var(--b2) 55%,var(--b3) 100%) fixed;min-height:100vh}
+body::before{content:"";position:fixed;z-index:-1;right:-70px;top:120px;width:250px;height:250px;border-radius:50%;background:linear-gradient(160deg,var(--a1),var(--a2));box-shadow:0 0 120px 50px var(--glow);opacity:var(--orb)}
+body::after{content:"";position:fixed;z-index:-1;left:-90px;bottom:90px;width:230px;height:230px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--orbhi),var(--b1) 55%,var(--a1));opacity:calc(var(--orb)*.85)}
+#app{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 18px) 18px calc(120px + env(safe-area-inset-bottom))}
+.glass{background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);border-radius:28px}
+h1{font-size:40px;line-height:1.05;font-weight:300;margin:6px 0 18px;letter-spacing:-.5px}
+h1 span{display:block;color:#b9b2aa}
+.hero{display:flex;justify-content:space-between;align-items:flex-start;margin:4px 0 18px}
+.hero .big{font-size:44px;line-height:1.05;font-weight:300;letter-spacing:-1px}
+.hero .big span{display:block;color:var(--mute2)}
+.hero .side{text-align:right;font-size:13px;color:var(--mute);padding-top:8px}
+.hero .side b{display:block;font-size:28px;font-weight:300;color:var(--ink)}
+.arrows{display:flex;gap:8px;margin-top:10px}
+.arrows button{width:38px;height:38px;border-radius:19px;border:1px solid var(--line);background:var(--glass);color:var(--ink);font-size:18px}
+.week{display:flex;justify-content:space-between;padding:10px 8px;margin-bottom:16px}
+.week button{flex:1;background:none;border:0;font:inherit;color:var(--mute);padding:6px 0 8px;border-radius:22px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.week small{font-size:11px;color:var(--mute2)}
+.week b{font-weight:500;font-size:15px}
+.week .d{width:4px;height:4px;border-radius:2px;background:var(--a2);margin-top:1px;opacity:0}
+.week .has .d{opacity:1}
+.week .sel{background:var(--btn);color:var(--btnink)}.week .sel small{color:var(--btnink);opacity:.6}.week .sel .d{background:var(--a1)}
+.dark{background:var(--btn);color:var(--btnink);border-radius:26px;padding:18px 20px;display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px;width:100%;border:0;text-align:left;font:inherit}
+.dark .k{font-size:26px;font-weight:300;line-height:1.15}.dark .k span{display:block;opacity:.55;font-size:17px;margin-top:4px}
+.dark .go{font-size:14px;white-space:nowrap;padding-left:12px}
+.entry{display:flex;gap:12px;align-items:center;padding:14px 16px;margin-bottom:10px;border-radius:26px}
+.entry .tm{width:62px;font-size:13px;color:var(--mute);line-height:1.3;font-variant-numeric:tabular-nums}
+.entry .tm b{display:block;font-weight:500;color:var(--ink);font-size:15px}
+.entry .tx{flex:1;white-space:pre-wrap;word-break:break-word}
+.tag{display:inline-block;font-size:11px;color:var(--accd);background:color-mix(in srgb,var(--a2) 16%,transparent);border-radius:10px;padding:1px 8px;margin-bottom:3px}
+.badge{min-width:38px;height:38px;border-radius:19px;display:grid;place-items:center;font-weight:500;font-size:15px}
+.empty{color:var(--mute);text-align:center;padding:40px 8px;font-weight:300;font-size:18px}
+.fab{position:fixed;right:20px;bottom:calc(92px + env(safe-area-inset-bottom));height:56px;padding:0 8px 0 22px;border-radius:28px;border:0;background:var(--btn);color:var(--btnink);font:inherit;font-size:15px;display:flex;align-items:center;gap:12px;box-shadow:0 10px 26px rgba(0,0,0,.25)}
+.fab i{font-style:normal;width:40px;height:40px;border-radius:20px;background:var(--btnink);color:var(--btn);display:grid;place-items:center;font-size:22px}
+.nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));display:flex;gap:4px;padding:6px;border-radius:30px;width:min(92vw,420px)}
+.nav button{flex:1;background:none;border:0;color:var(--mute);font:inherit;font-size:13px;padding:11px 4px;border-radius:24px}
+.nav button.on{background:var(--btn);color:var(--btnink)}
+input[type=search],input[type=time],textarea{width:100%;font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:22px;padding:13px 16px;outline:none}
+textarea{min-height:120px;resize:vertical;border-radius:24px}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:20px;padding:8px 14px;font:inherit;font-size:14px}
+.chip.on{background:var(--btn);border-color:var(--btn);color:var(--btnink)}
+.mood .chip{min-width:40px;padding:9px 0;text-align:center}
+.mood .chip.on{background:linear-gradient(160deg,var(--a1),var(--a2));border-color:transparent;color:#fff}
+.item{display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:8px;width:100%;text-align:left;font:inherit;color:var(--ink);border-radius:24px}
+.item .c{width:26px;height:26px;border-radius:13px;border:1.5px solid var(--mute2);display:grid;place-items:center;color:#fff;font-size:14px;flex:none}
+.item.done .c{background:linear-gradient(160deg,var(--a1),var(--a2));border-color:transparent}
+.item small{display:block;color:var(--accd);font-size:12px}
+.sheet-bg{position:fixed;inset:0;background:rgba(40,25,10,.35);display:none;align-items:flex-end;justify-content:center;z-index:10}
+.sheet-bg.show{display:flex}
+.sheet{background:var(--sheet);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:32px 32px 0 0;padding:20px 18px calc(22px + env(safe-area-inset-bottom))}
+.sheet h2{font-size:26px;font-weight:300;margin:0 0 14px;letter-spacing:-.4px}
+.lbl{font-size:12px;color:var(--mute);margin:10px 4px 5px;letter-spacing:.3px}
+.btn{border:0;border-radius:26px;padding:14px 22px;font:inherit;font-weight:500;background:var(--btn);color:var(--btnink)}
+.btn.sec{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+.btn.del{background:none;color:#c0502a;padding:14px 8px}
+.mic{flex:none;width:46px;height:46px;border-radius:23px;border:1px solid var(--line);background:var(--soft);font-size:19px}
+.mic.rec{background:linear-gradient(160deg,var(--a1),var(--a2));color:#fff;border-color:transparent}
+.hint{color:var(--mute);font-size:13px;margin:6px 4px}
+.set p{color:var(--mute);font-size:14px}
+.sws{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.sw{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);background:var(--soft);color:var(--ink);border-radius:20px;padding:8px 12px;font:inherit;font-size:14px}.sw.on{border-color:var(--a2)}.sw i{width:26px;height:26px;border-radius:13px;flex:none}.cpick{width:52px;height:40px;padding:0;border:0;background:none}
+.pad{padding:16px 18px;border-radius:26px;margin-bottom:12px}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600&display=swap&subset=cyrillic" rel="stylesheet">
+</head>
+<body>
+<div id="app"></div>
+<nav class="nav glass">
+  <button data-t="diary">Щоденник</button>
+  <button data-t="ideas">Настрій</button>
+  <button data-t="set">Налаштування</button>
+</nav>
+<div class="sheet-bg" id="bg"><div class="sheet" id="sheet"></div></div>
+<script>
+const ACTS=[[1, "Бути за містом"], [3, "Займатися волонтерством у благодійних проектах"], [4, "Розмовляти з кимось про свої хоббі (напр., про спорт)"], [5, "Знайомитися з новими людьми"], [7, "Похід на концерт"], [8, "Грати в футбол (теніс, інше)"], [9, "Планування поїздки чи відпустки"], [10, "Шопінг"], [11, "Перебування на пляжі"], [12, "Заняття мистецтвом (малювання, скульптура, живопис, створення кіно тощо)"], [13, "Альпінізм"], [14, "Читання Святого Письма або інших духовних творів"], [17, "Задумати чи зробити ремонт у моїй кімнаті або будинку"], [19, "Похід на спортивний захід/подію"], [20, "Читання навчальної літератури, яка вчить вас робити щось нове"], [21, "Похід на перегони (кінні, авто, тощо)"], [22, "Читання оповідань, романів, віршів або п'єс"], [23, "Відвідання вечірки"], [24, "Похід на лекцію/семінар/тренінг"], [25, "Поїхати кудись автомобілем"], [26, "Дихання чистим повітрям"], [27, "Думання або написання пісень чи музики"], [28, "Пити ваш улюблений напій"], [31, "Зробити якусь приємність своїм батькам"], [32, "Реставрація антикваріату, оздоблення меблів"], [33, "Перегляд телебачення"], [35, "Піти в похід з наметом"], [38, "Думати про щось хороше у майбутньому"], [39, "Грати в настільні ігри"], [41, "Подивитися кінокомедію"], [42, "Вирішення задач, головоломок, кросвордів"], [43, "Відвідати урочисту подію (весілля, останній дзвоник і т.п.)"], [46, "Пообідати з друзями або співробітниками"], [49, "Прийняти душ/ванну"], [52, "Писати оповідання, романи, п'єси, вірші"], [53, "Провести час з тваринами (домашні, зоопарк і т.п.)"], [57, "Співати разом з іншими"], [58, "Планувати щось на майбутнє"], [59, "Виконувати добре свою роботу"], [61, "Піти в церкву"], [62, "Розмовляти іноземною мовою"], [66, "Грати на музичному інструменті"], [71, "Розчісувати або вкладати волосся, робити зачіску"], [73, "Подрімати"], [74, "Проводити час з друзями"], [75, "Консервувати, заморожувати продукти тощо"], [77, "Вирішувати проблеми особистого характеру"], [78, "Походити по місту (наприклад, улюбленими вулицями)"], [80, "Співати самому для себе"], [83, "Відвідати родичів"], [85, "Займатись ремеслом (гончарство, ювелірні вироби, шкіряні, бісер, ткацтво і т.д.)"], [88, "Робити макіяж"], [89, "Дизайн або конструювання"], [90, "Відвідування хворих людей, одиноких і т.п. (наприклад, у старечому будинку, хоспісі і т.п.)"], [96, "Садівництво, ландшафтний дизайн, або робота на подвір’ї"], [100, "Танцювати"], [101, "Сидіти на сонці"], [103, "Просто сидіти і думати"], [106, "Піти на ярмарку, карнавал, цирк, зоопарк, або парк розваг"], [107, "Говорити на філософські або релігійні теми"], [112, "Слухати звуки природи"], [113, "Піти на побачення"], [116, "Слухати радіо"], [117, "Запросити друзів до себе в гості"], [118, "Взяти участь у спортивних змаганнях"], [120, "Дарувати подарунки"], [122, "Піти на масаж"], [124, "Дивитись на небо (денне, нічне, при сході/заході сонця)"], [125, "Виходити з дому (на екскурсії, в парк, пікнік, барбекю і т.д.)"], [127, "Купувати щось для сім’ї"], [128, "Фотографувати"], [129, "Виступати з промовою або презентацією"], [131, "Збирати об’єкти природи (гриби, ягоди, цікаві камінці, цілющі трави і т.п.)"], [132, "Планувати власні фінанси"], [135, "Допомагати комусь, хто потребує у чомусь допомоги (наприклад, дітям, сусідам, рідним і т.п.)"], [136, "Бути в горах"], [138, "Слухати жарти"], [144, "Дивитись на чудові пейзажі"], [145, "Їсти смачну/особливу/нову їжу"], [146, "Покращувати своє здоров’я (піти до стоматолога, купити нові окуляри, змінити дієту і т.п.)"], [147, "Піти в торгівельний центр"], [152, "Піти в музей або на виставку"], [156, "Риболовля"], [163, "Навчитися робити щось нове"], [165, "Зробити комусь комплімент або сказати щиро добрі слова"], [166, "Думати про людей, які мені подобаються"], [170, "Кататись верхи"], [171, "Брати участь у громадській, політичній діяльності, екологічних організаціях і т.п."], [172, "Розмовляти по телефону"], [173, "Віддаватись мріям"], [174, "Ходити по листю, піску, гальці"], [176, "Зустрічатися з друзями"], [178, "Ходити в кіно"], [180, "Бути на самоті"], [182, "Готувати їжу"], [185, "Молитися"], [187, "Прибирати вдома"], [194, "Піти в ресторан"], [195, "Дивитися на квіти, дерева…"], [201, "Зустрічати схід сонця"], [202, "Бути в тиші"], [203, "Робити експерименти або іншу наукову роботу"], [205, "Писати щоденник"], [211, "Медитувати"], [221, "Читати газету"], [228, "Плавати"], [231, "Ходити босоніж на природі"], [235, "Слухати музику"], [237, "В’язання, вишивка, рукоділля, або художня вишивка"], [241, "Піти до перукаря чи косметолога"], [243, "Бути з кимось, кого я люблю"], [244, "Читати журнали"], [245, "Довго спати"], [246, "Почати новий проект"], [250, "Піти в бібліотеку"], [255, "Сидіти в кафе і дивитись на перехожих"], [256, "Розпалювати або спостерігати за вогнищем"], [260, "Піти до сповіді чи на бесіду до священника"], [261, "Ремонтувати щось"], [262, "Працювати в команді з іншими людьми"], [263, "Кататись на велосипеді"], [265, "Бути зі щасливим людьми"], [266, "Грати в колективні ігри"], [267, "Писати листи, листівки, записки"], [268, "Розмовляти про політику"], [271, "Розмовляти про моє хобі чи особливий інтерес"], [272, "Займатися йогою"], [273, "Посміхатись людям"], [276, "Проводити час з коханою людиною, виявляти любов"], [278, "Ходити на екскурсії, прогулянки на природі і т.д."], [279, "Висловлювати свою любов до когось"], [281, "Догляд за кімнатними рослинами"], [282, "Пити каву/чай"], [283, "Піти на прогулянку"], [284, "Колекціонувати речі"], [286, "Шиття"], [287, "Дивитися фотографії"], [288, "Відвідати могили померлих рідних/друзів, згадувати їх, розмовляти з ними подумки і т.п."], [289, "Робити щось з дітьми"], [294, "Лягти спати пізніше, ніж звичайно."], [296, "Проводити час з сім’єю"], [310, "Подорожувати з групою"], [311, "Бачитись зі старими друзями"], [312, "Когось вчити"], [314, "Подорожувати"], [317, "Гратися з домашніми улюбленцями"], [318, "Піти на виставу"], [319, "Дивитись на місяць чи зорі"]];
+const $=s=>document.querySelector(s);
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const hm=d=>pad(d.getHours())+':'+pad(d.getMinutes());
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const DAYS=['Неділя','Понеділок','Вівторок','Середа','Четвер','Пʼятниця','Субота'];
+const MONTHS=['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+
+/* ---- сховище (локально на пристрої). Єдине місце, куди пізніше підключимо синхронізацію ---- */
+/* ---- теми ---- */
+const THEMES={
+ peach:{n:'Персик',b:['#f6ebe0','#f0dccb','#ecd2bc'],a:['#ffb067','#ff7d12'],d:'#c25f00',glow:'rgba(255,150,60,.35)'},
+ mint:{n:'М’ята',b:['#eff4ec','#e0ebe1','#d0e1d5'],a:['#9bd9b2','#3fa56f'],d:'#2b7e51',glow:'rgba(80,190,120,.3)'},
+ lav:{n:'Лаванда',b:['#f3eff8','#e6dff1','#d8cdea'],a:['#c8b0f4','#8b5cf6'],d:'#6a3fd0',glow:'rgba(140,100,240,.3)'},
+ sky:{n:'Небо',b:['#ecf3f9','#dce9f3','#cadeed'],a:['#97ccf4','#3b8fe0'],d:'#2468b3',glow:'rgba(70,150,230,.3)'},
+ rose:{n:'Рожевий',b:['#fbeef0','#f6dfe4','#eecdd7'],a:['#ffa9bd','#ec4f78'],d:'#c22e57',glow:'rgba(236,80,120,.3)'},
+ mono:{n:'Чорно-білий',b:['#f4f4f3','#e9e9e8','#dcdcdb'],a:['#9a9a98','#2a2a29'],d:'#2a2a29',glow:'rgba(0,0,0,.12)'},
+ dark:{n:'Графіт',dark:1,b:['#1f1e1d','#262422','#2e2b28'],a:['#ffb067','#ff7d12'],d:'#ffb067',glow:'rgba(255,125,18,.28)'}
+};
+function mix(c,w,p){const h=x=>parseInt(c.slice(x,x+2),16);const f=(v,o)=>Math.round(v*(1-p)+o*p);return'#'+[1,3,5].map(i=>f(h(i),w).toString(16).padStart(2,'0')).join('')}
+function themeFromColor(c){return{b:[mix(c,255,.9),mix(c,255,.82),mix(c,255,.72)],a:[mix(c,255,.35),c],d:mix(c,0,.3),glow:c+'55'}}
+let Theme=(()=>{try{return JSON.parse(localStorage.getItem('diary.theme'))||{id:'lav',orb:true}}catch(e){return{id:'lav',orb:true}}})();
+function applyTheme(){
+  const th=Theme.id==='custom'?themeFromColor(Theme.color||'#ff7d12'):(THEMES[Theme.id]||THEMES.peach);
+  const s=document.documentElement.style,dk=!!th.dark;
+  const v={'--b1':th.b[0],'--b2':th.b[1],'--b3':th.b[2],'--a1':th.a[0],'--a2':th.a[1],'--accd':th.d,'--glow':th.glow,'--orb':Theme.orb?1:0,'--orbhi':dk?'#55514c':'#fff',
+   '--ink':dk?'#f1ece5':'#1c1b1a','--mute':dk?'#a8a198':'#6d665f','--mute2':dk?'#6d675f':'#b3aca4',
+   '--glass':dk?'rgba(255,255,255,.07)':'rgba(255,255,255,.58)','--line':dk?'rgba(255,255,255,.12)':'rgba(255,255,255,.7)','--soft':dk?'rgba(255,255,255,.08)':'rgba(255,255,255,.65)',
+   '--sheet':dk?'rgba(36,34,32,.96)':'rgba(255,255,255,.88)','--btn':dk?'#f1ece5':'#1c1b1a','--btnink':dk?'#1c1b1a':'#fff'};
+  for(const k in v)s.setProperty(k,v[k]);
+  const tc=document.getElementById('tc');if(tc)tc.content=th.b[1];
+}
+function setTheme(id){Theme.id=id;saveTheme()}
+function setColor(c){Theme.id='custom';Theme.color=c;saveTheme()}
+function setOrb(on){Theme.orb=on;saveTheme()}
+function saveTheme(){localStorage.setItem('diary.theme',JSON.stringify(Theme));applyTheme();if(tab==='set')render()}
+applyTheme();
+const Store={
+  key:'diary.v1',
+  load(){try{return JSON.parse(localStorage.getItem(this.key))||{entries:[]}}catch(e){return{entries:[]}}},
+  save(){localStorage.setItem(this.key,JSON.stringify(this.data))},
+  data:null,
+  upsert(e){e.updated=Date.now();const i=this.data.entries.findIndex(x=>x.id===e.id);i>=0?this.data.entries[i]=e:this.data.entries.push(e);this.save()},
+  remove(id){this.data.entries=this.data.entries.filter(x=>x.id!==id);this.save()},
+  day(d){return this.data.entries.filter(e=>e.date===d).sort((a,b)=>a.start.localeCompare(b.start))}
+};
+Store.data=Store.load();
+
+let tab='diary',cur=new Date(),q='',onlyDone=false;
+const WD=['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+function moodStyle(m){return`background:color-mix(in srgb,var(--a2) ${m*10}%,color-mix(in srgb,var(--a1) 35%,white));color:${m>=6?'#fff':'#3b2a1c'}`}
+function render(){
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
+  const app=$('#app');
+  app.innerHTML=tab==='diary'?viewDiary():tab==='ideas'?viewIdeas():viewSet();
+  if(tab==='ideas'){const s=$('#q');if(s)s.oninput=e=>{q=e.target.value;const p=s.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(p,p)}}
+}
+function weekHtml(){
+  const d0=new Date(cur);const wd=(d0.getDay()+6)%7;d0.setDate(d0.getDate()-wd);
+  let h='<div class="week glass">';
+  for(let i=0;i<7;i++){const d=new Date(d0);d.setDate(d0.getDate()+i);const k=ymd(d);
+    const has=Store.data.entries.some(e=>e.date===k);
+    h+=`<button class="${k===ymd(cur)?'sel':''} ${has?'has':''}" onclick="pick('${k}')"><small>${WD[d.getDay()]}</small><b>${d.getDate()}</b><span class="d"></span></button>`}
+  return h+'</div>';
+}
+function pick(k){const [y,m,d]=k.split('-').map(Number);cur=new Date(y,m-1,d);render()}
+function viewDiary(){
+  const d=ymd(cur),list=Store.day(d),isToday=d===ymd(new Date());
+  const ms=list.filter(e=>e.mood!=null).map(e=>e.mood);
+  const avg=ms.length?(ms.reduce((a,b)=>a+b,0)/ms.length).toFixed(1):'–';
+  const idea=ACTS[Math.floor(Math.random()*ACTS.length)];
+  return`<div class="hero"><div><div class="big">${isToday?'Сьогодні':DAYS[cur.getDay()]}<span>${cur.getDate()} ${MONTHS[cur.getMonth()]}</span></div>
+    <div class="arrows"><button onclick="shift(-1)">‹</button><button onclick="shift(1)">›</button>${isToday?'':'<button style="width:auto;padding:0 14px;font-size:13px" onclick="goToday()">сьогодні</button>'}</div></div>
+    <div class="side">пригніченість<b>${avg}</b>записів: ${list.length}</div></div>
+  ${weekHtml()}
+  <button class="dark" onclick="doAct(${idea[0]})"><div class="k">Ідея на зараз<span>${esc(idea[1])}</span></div><div class="go">Спробувати ›</div></button>
+  ${list.length?list.map(cardHtml).join(''):'<div class="empty">Поки порожньо</div>'}
+  <button class="fab" onclick="editEntry()">Новий запис <i>+</i></button>`;
+}
+function cardHtml(e){
+  const a=e.act?`<span class="tag">зі списку</span><br>`:'';
+  return`<div class="entry glass" onclick="editEntry('${e.id}')"><div class="tm"><b>${e.start}</b>${e.end}</div><div class="tx">${a}${esc(e.text)}</div>${e.mood!=null?`<div class="badge" style="${moodStyle(e.mood)}">${e.mood}</div>`:''}</div>`;
+}
+function viewIdeas(){
+  const today=Store.day(ymd(new Date())).filter(e=>e.act);
+  const doneMap={};today.forEach(e=>doneMap[e.act]=e);
+  let items=ACTS.filter(([n,t])=>t.toLowerCase().includes(q.toLowerCase()));
+  if(onlyDone)items=items.filter(([n])=>doneMap[n]);
+  return`<h1>Що піднімає<span>настрій</span></h1>
+  <div class="row"><input id="q" type="search" placeholder="Пошук…" value="${esc(q)}"><button class="chip" style="height:46px;width:52px" onclick="randomIdea()">🎲</button></div>
+  <div class="chips" style="margin-bottom:14px"><button class="chip ${onlyDone?'':'on'}" onclick="onlyDone=false;render()">Усі</button><button class="chip ${onlyDone?'on':''}" onclick="onlyDone=true;render()">Зроблено сьогодні · ${today.length}</button></div>
+  ${items.map(([n,t])=>{const d=doneMap[n];return`<button class="item glass ${d?'done':''}" onclick="doAct(${n})"><span class="c">${d?'✓':''}</span><span>${esc(t)}${d?`<small>сьогодні ${d.start}–${d.end}</small>`:''}</span></button>`}).join('')||'<div class="empty">Нічого не знайдено</div>'}`;
+}
+function viewSet(){
+  const sw=Object.entries(THEMES).map(([k,x])=>`<button class="sw ${Theme.id===k?'on':''}" onclick="setTheme('${k}')"><i style="background:linear-gradient(135deg,${x.b[1]} 45%,${x.a[1]} 46%)"></i>${x.n}</button>`).join('');
+  return`<h1>Налаштування</h1>
+  <div class="set glass pad"><div class="lbl" style="margin-top:0">ТЕМА</div><div class="sws">${sw}</div>
+  <div class="lbl">СВІЙ КОЛІР</div><div class="row"><input type="color" id="cc" value="${Theme.color||'#ff7d12'}" onchange="setColor(this.value)" class="cpick"><span class="hint" style="margin:0">Обери будь-який, фон і акценти підлаштуються</span></div>
+  <div class="lbl">ДЕКОР</div><button class="chip ${Theme.orb?'on':''}" onclick="setOrb(${!Theme.orb})">Кола на фоні: ${Theme.orb?'так':'ні'}</button></div>
+  <div class="set glass pad"><div class="lbl" style="margin-top:0">ДАНІ</div>
+  <p style="margin-top:4px">Дані зберігаються на цьому пристрої. Щоб перенести їх або зробити копію — експорт і імпорт.</p>
+  <div class="row"><button class="btn" onclick="exportData()">Зберегти копію</button><button class="btn sec" onclick="$('#imp').click()">Завантажити копію</button></div>
+  <input id="imp" type="file" accept="application/json" hidden onchange="importData(this.files[0])">
+  <p>Усього записів: ${Store.data.entries.length}</p></div>`;
+}
+function shift(n){cur.setDate(cur.getDate()+n);render()}
+function goToday(){cur=new Date();render()}
+function randomIdea(){const [n]=ACTS[Math.floor(Math.random()*ACTS.length)];doAct(n)}
+
+/* ---- форма запису ---- */
+let moodSel=null,rec=null,recLang='uk-UA';
+function openSheet(html){$('#sheet').innerHTML=html;$('#bg').classList.add('show')}
+function closeSheet(){stopRec();$('#bg').classList.remove('show')}
+$('#bg').addEventListener('click',e=>{if(e.target.id==='bg')closeSheet()});
+function moodChips(){return`<div class="chips mood">${[...Array(11).keys()].map(i=>`<button class="chip ${moodSel===i?'on':''}" onclick="setMood(${i})">${i}</button>`).join('')}</div>`}
+function setMood(i){moodSel=moodSel===i?null:i;$('#moodbox').innerHTML=moodChips()}
+function editEntry(id,pre){
+  const e=id?Store.data.entries.find(x=>x.id===id):null;
+  const now=new Date(),before=new Date(now-30*60000);
+  const v=e||pre||{start:hm(before),end:hm(now),text:'',mood:null};
+  moodSel=v.mood??null;
+  window._ed={id:e?e.id:null,act:v.act||null,date:e?e.date:ymd(cur)};
+  openSheet(`<h2>${e?'Запис':'Новий запис'}</h2>
+  <div class="row"><div style="flex:1"><div class="lbl">Початок</div><input type="time" id="st" value="${v.start}"></div><div style="flex:1"><div class="lbl">Кінець</div><input type="time" id="en" value="${v.end}"></div></div>
+  <div class="lbl">Що ти робила</div>
+  <div class="row" style="align-items:flex-start"><textarea id="tx" placeholder="Напиши ручкою, надиктуй або надрукуй…">${esc(v.text)}</textarea><div><button class="mic" id="mic" onclick="toggleRec()">🎤</button><button class="chip" style="margin-top:6px;width:46px;padding:6px 0" id="lg" onclick="toggleLang()">UK</button></div></div>
+  <div class="hint" id="mh"></div>
+  <div class="lbl">ПРИГНІЧЕНИЙ НАСТРІЙ · 0 немає, 10 дуже сильний</div><div id="moodbox">${moodChips()}</div>
+  <div class="row" style="margin-top:16px"><button class="btn" style="flex:1" onclick="saveEntry()">Зберегти</button><button class="btn sec" onclick="closeSheet()">Скасувати</button>${e?`<button class="btn del" onclick="delEntry('${e.id}')">Видалити</button>`:''}</div>`);
+}
+function saveEntry(){
+  const text=$('#tx').value.trim(),start=$('#st').value,end=$('#en').value;
+  if(!start||!end){alert('Вкажи час');return}
+  if(!text&&!window._ed.act){alert('Напиши, що ти робила');return}
+  Store.upsert({id:window._ed.id||('e'+Date.now()+Math.random().toString(36).slice(2,6)),date:window._ed.date,start,end,text,mood:moodSel,act:window._ed.act});
+  closeSheet();render();
+}
+function delEntry(id){if(confirm('Видалити запис?')){Store.remove(id);closeSheet();render()}}
+function doAct(n){
+  const a=ACTS.find(x=>x[0]===n),now=new Date(),before=new Date(now-30*60000);
+  const ex=Store.day(ymd(new Date())).find(e=>e.act===n);
+  const savedCur=cur;cur=new Date();
+  if(ex)editEntry(ex.id);else editEntry(null,{start:hm(before),end:hm(now),text:a[1],mood:null,act:n});
+  $('.sheet h2').textContent=a[1];
+}
+
+/* ---- диктування ---- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function toggleLang(){recLang=recLang==='uk-UA'?'ru-RU':'uk-UA';$('#lg').textContent=recLang==='uk-UA'?'UK':'RU';if(rec){stopRec();toggleRec()}}
+function toggleRec(){
+  if(rec){stopRec();return}
+  if(!SR){$('#mh').textContent='Тут нема вбудованого диктування. Натисни 🎤 на клавіатурі телефону чи планшета.';$('#tx').focus();return}
+  rec=new SR();rec.lang=recLang;rec.continuous=true;rec.interimResults=true;
+  const ta=$('#tx');const base=ta.value?ta.value.replace(/\s*$/,' '):'';let fin='';
+  rec.onresult=ev=>{let it='';for(let i=ev.resultIndex;i<ev.results.length;i++){const r=ev.results[i];if(r.isFinal)fin+=r[0].transcript;else it+=r[0].transcript}ta.value=base+fin+it};
+  rec.onerror=()=>{$('#mh').textContent='Не вийшло увімкнути мікрофон. Дозволь доступ або натисни 🎤 на клавіатурі.';stopRec()};
+  rec.onend=()=>{if(rec){rec=null;const m=$('#mic');m&&m.classList.remove('rec')}};
+  try{rec.start();$('#mic').classList.add('rec');$('#mh').textContent='Слухаю… натисни ще раз, щоб зупинити.'}catch(e){rec=null}
+}
+function stopRec(){if(rec){const r=rec;rec=null;try{r.stop()}catch(e){}}const m=$('#mic');if(m)m.classList.remove('rec');const h=$('#mh');if(h)h.textContent=''}
+
+/* ---- копія даних ---- */
+function exportData(){
+  const b=new Blob([JSON.stringify(Store.data,null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='shchodennyk-'+ymd(new Date())+'.json';a.click();
+}
+function importData(f){
+  if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.entries))throw 0;
+    const map=new Map(Store.data.entries.map(e=>[e.id,e]));
+    d.entries.forEach(e=>{const o=map.get(e.id);if(!o||(e.updated||0)>(o.updated||0))map.set(e.id,e)});
+    Store.data.entries=[...map.values()];Store.save();render();alert('Готово')}catch(e){alert('Не вдалося прочитати файл')}};
+  r.readAsText(f);
+}
+
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render();scrollTo(0,0)});
+render();
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
