@@ -385,7 +385,13 @@ const Remind={st:(()=>{try{return JSON.parse(localStorage.getItem('diary.remind'
     if(this.st.on){try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();if(sub)await this.push(sub,true);this.msg='Збережено'}catch(e){this.msg=e.message}render()}
   },
   async test(){
-    try{const reg=await navigator.serviceWorker.ready;await reg.showNotification('Щоденник',{body:'Що ти робила цієї години? Запиши коротко.',icon:'icon-192.png',tag:'test'})}catch(e){this.msg='Не вдалося показати сповіщення';render()}
+    try{
+      if(!('Notification' in window))throw new Error('Цей браузер не підтримує сповіщення');
+      if(Notification.permission!=='granted'){const p=await Notification.requestPermission();if(p!=='granted'){this.msg='Дозвіл на сповіщення не надано';render();throw new Error(this.msg)}}
+      const reg=await Promise.race([navigator.serviceWorker.ready,new Promise((_,rj)=>setTimeout(()=>rj(new Error('Фонова служба не запущена — онови сторінку (Cmd+R)')),4000))]);
+      await reg.showNotification('Щоденник',{body:'Що ти робила цієї години? Запиши коротко.',icon:'icon-192.png',tag:'test'});
+      this.msg='Сповіщення надіслано. Якщо його не видно — воно заблоковане налаштуваннями системи (macOS: Системні налаштування → Сповіщення; Android: Налаштування → Застосунки → Сповіщення).';render();toast('Надіслано ✓');
+    }catch(e){this.msg=e.message||'Помилка';render();toast(this.msg)}
   }
 };
 function remindHtml(){
@@ -394,6 +400,7 @@ function remindHtml(){
   <p style="margin:4px 0 10px">Щогодини, у вибраний проміжок, приходитиме сповіщення «Що ти робила цієї години?».</p>
   <div class="row"><div style="flex:1"><div class="lbl">З</div><select style="width:100%" onchange="Remind.setWin('from',this.value)">${opt(R.from)}</select></div>
   <div style="flex:1"><div class="lbl">До</div><select style="width:100%" onchange="Remind.setWin('to',this.value)">${opt(R.to)}</select></div></div>
+  <div class="hint" style="margin:0 0 6px">Дозвіл браузера: ${'Notification' in window?({granted:'є',denied:'заблоковано',default:'ще не запитано'}[Notification.permission]):'не підтримується'}</div>
   <div class="hint" style="margin:0 0 10px">${esc(Remind.msg||'')}</div>
   <div class="row">${R.on?`<button class="btn sec" onclick="Remind.disable()">Вимкнути на цьому пристрої</button>`:`<button class="btn" onclick="Remind.enable()">Увімкнути на цьому пристрої</button>`}<button class="btn sec" onclick="Remind.test()">Перевірити</button></div>
   <div class="hint">Увімкнути потрібно окремо на кожному пристрої (Pixel, iPad, Mac).</div></div>`;
