@@ -52,7 +52,7 @@ h1 span{display:block;color:#b9b2aa}
 .nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));display:flex;gap:4px;padding:6px;border-radius:30px;width:min(92vw,420px)}
 .nav button{flex:1;background:none;border:0;color:var(--mute);font:inherit;font-size:13px;padding:11px 4px;border-radius:24px}
 .nav button.on{background:var(--btn);color:var(--btnink)}
-input[type=search],input[type=time],textarea{width:100%;font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:22px;padding:13px 16px;outline:none}
+input[type=search],input[type=time],input[type=text],input[type=password],textarea{width:100%;font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:22px;padding:13px 16px;outline:none}
 textarea{min-height:120px;resize:vertical;border-radius:24px}
 .row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
@@ -134,10 +134,81 @@ const Store={
   save(){localStorage.setItem(this.key,JSON.stringify(this.data))},
   data:null,
   upsert(e){e.updated=Date.now();const i=this.data.entries.findIndex(x=>x.id===e.id);i>=0?this.data.entries[i]=e:this.data.entries.push(e);this.save()},
-  remove(id){this.data.entries=this.data.entries.filter(x=>x.id!==id);this.save()},
-  day(d){return this.data.entries.filter(e=>e.date===d).sort((a,b)=>a.start.localeCompare(b.start))}
+  remove(id){const e=this.data.entries.find(x=>x.id===id);if(e){e.deleted=true;e.updated=Date.now();this.save()}},
+  day(d){return this.data.entries.filter(e=>!e.deleted&&e.date===d).sort((a,b)=>a.start.localeCompare(b.start))}
 };
 Store.data=Store.load();
+
+
+/* ---- синхронізація (Supabase) ---- */
+const SB_URL='https://tnwvodcsnjfqeyeelvhl.supabase.co';const SB_KEY='sb_publishable_J44_OTe7LLU7NDjRkzKVWA_Fu9UuM6t';
+const Sync={
+  st:(()=>{try{return JSON.parse(localStorage.getItem('diary.sync'))||{}}catch(e){return{}}})(),
+  busy:false,msg:'',timer:null,
+  on(){return !!(SB_URL&&SB_KEY)},
+  save(){localStorage.setItem('diary.sync',JSON.stringify(this.st))},
+  hdr(tok){const h={'apikey':SB_KEY,'Content-Type':'application/json'};if(tok)h['Authorization']='Bearer '+tok;return h},
+  async auth(path,body){
+    const r=await fetch(SB_URL+'/auth/v1/'+path,{method:'POST',headers:this.hdr(),body:JSON.stringify(body)});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(j.msg||j.error_description||j.message||('Помилка '+r.status));
+    return j;
+  },
+  setSession(j){
+    if(!j.access_token)throw new Error('Потрібно підтвердити пошту — перевір лист');
+    this.st.session={access:j.access_token,refresh:j.refresh_token,exp:Date.now()+(j.expires_in||3600)*1000-60000,email:(j.user&&j.user.email)||this.st.session&&this.st.session.email};
+    this.save();
+  },
+  async signIn(email,pw,create){
+    this.msg='';
+    try{
+      let j;
+      if(create){j=await this.auth('signup',{email,password:pw});if(!j.access_token)j=await this.auth('token?grant_type=password',{email,password:pw})}
+      else j=await this.auth('token?grant_type=password',{email,password:pw});
+      this.st.lastPull=0;this.st.lastPush=0;this.setSession(j);
+      await this.run();
+    }catch(e){this.msg=e.message==='Invalid login credentials'?'Невірна пошта або пароль':e.message;render()}
+  },
+  signOut(){this.st={};this.save();this.msg='';render()},
+  async token(){
+    const s=this.st.session;if(!s)return null;
+    if(Date.now()<s.exp)return s.access;
+    const j=await this.auth('token?grant_type=refresh_token',{refresh_token:s.refresh});
+    this.setSession(j);return this.st.session.access;
+  },
+  kick(){clearTimeout(this.timer);this.timer=setTimeout(()=>this.run(),1500)},
+  async run(){
+    if(!this.on()||!this.st.session||this.busy)return;
+    this.busy=true;
+    try{
+      const tok=await this.token();
+      // 1) отримати зміни з хмари
+      const r=await fetch(`${SB_URL}/rest/v1/entries?select=id,data,updated,deleted&updated=gt.${this.st.lastPull||0}&order=updated.asc&limit=5000`,{headers:this.hdr(tok)});
+      if(r.status===401)throw new Error('Потрібно увійти знову');
+      if(!r.ok)throw new Error('Помилка '+r.status);
+      const rows=await r.json();let changed=false,maxU=this.st.lastPull||0;
+      const map=new Map(Store.data.entries.map(e=>[e.id,e]));
+      for(const x of rows){maxU=Math.max(maxU,x.updated);const o=map.get(x.id);
+        if(!o||x.updated>(o.updated||0)){const e={...x.data,id:x.id,updated:x.updated,deleted:!!x.deleted};map.set(x.id,e);changed=true}}
+      if(changed){Store.data.entries=[...map.values()];Store.save()}
+      this.st.lastPull=maxU;
+      // 2) відправити свої зміни
+      const out=Store.data.entries.filter(e=>(e.updated||0)>(this.st.lastPush||0));
+      if(out.length){
+        const body=out.map(e=>{const {deleted,...d}=e;return{id:e.id,data:d,updated:e.updated||0,deleted:!!e.deleted}});
+        const w=await fetch(`${SB_URL}/rest/v1/entries?on_conflict=user_id,id`,{method:'POST',headers:{...this.hdr(tok),'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});
+        if(!w.ok)throw new Error('Не вдалося зберегти в хмару ('+w.status+')');
+        this.st.lastPush=Math.max(...out.map(e=>e.updated||0));
+      }
+      this.save();this.msg='Синхронізовано о '+hm(new Date());
+      if(changed&&!document.getElementById('bg').classList.contains('show'))render();else if(tab==='set')render();
+    }catch(e){this.msg=(e.message||'Помилка').replace('Failed to fetch','Немає звʼязку — спробую пізніше');if(tab==='set')render()}
+    this.busy=false;
+  }
+};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)Sync.run()});
+setInterval(()=>{if(!document.hidden)Sync.run()},60000);
+window.addEventListener('online',()=>Sync.run());
 
 let tab='diary',cur=new Date(),q='',onlyDone=false;
 const WD=['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
@@ -152,7 +223,7 @@ function weekHtml(){
   const d0=new Date(cur);const wd=(d0.getDay()+6)%7;d0.setDate(d0.getDate()-wd);
   let h='<div class="week glass">';
   for(let i=0;i<7;i++){const d=new Date(d0);d.setDate(d0.getDate()+i);const k=ymd(d);
-    const has=Store.data.entries.some(e=>e.date===k);
+    const has=Store.data.entries.some(e=>!e.deleted&&e.date===k);
     h+=`<button class="${k===ymd(cur)?'sel':''} ${has?'has':''}" onclick="pick('${k}')"><small>${WD[d.getDay()]}</small><b>${d.getDate()}</b><span class="d"></span></button>`}
   return h+'</div>';
 }
@@ -184,17 +255,30 @@ function viewIdeas(){
   <div class="chips" style="margin-bottom:14px"><button class="chip ${onlyDone?'':'on'}" onclick="onlyDone=false;render()">Усі</button><button class="chip ${onlyDone?'on':''}" onclick="onlyDone=true;render()">Зроблено сьогодні · ${today.length}</button></div>
   ${items.map(([n,t])=>{const d=doneMap[n];return`<button class="item glass ${d?'done':''}" onclick="doAct(${n})"><span class="c">${d?'✓':''}</span><span>${esc(t)}${d?`<small>сьогодні ${d.start}–${d.end}</small>`:''}</span></button>`}).join('')||'<div class="empty">Нічого не знайдено</div>'}`;
 }
+function syncHtml(){
+  const s=Sync.st.session;
+  if(s)return`<div class="set glass pad"><div class="lbl" style="margin-top:0">СИНХРОНІЗАЦІЯ</div><p style="margin:4px 0 10px">Увійшла як ${esc(s.email||'')}</p>
+   <div class="hint" style="margin:0 0 10px">${esc(Sync.msg||'')}</div>
+   <div class="row"><button class="btn" onclick="Sync.run()">Синхронізувати зараз</button><button class="btn sec" onclick="Sync.signOut()">Вийти</button></div></div>`;
+  return`<div class="set glass pad"><div class="lbl" style="margin-top:0">СИНХРОНІЗАЦІЯ</div>
+   <p style="margin:4px 0 10px">Увійди одним акаунтом на всіх пристроях, і записи будуть однакові скрізь.</p>
+   <input type="text" id="se" placeholder="Пошта" autocapitalize="off" autocomplete="email" inputmode="email" style="margin-bottom:8px">
+   <input type="password" id="sp" placeholder="Пароль (мінімум 6 символів)" autocomplete="current-password" style="margin-bottom:10px">
+   <div class="hint" style="margin:0 0 8px;color:#c0502a">${esc(Sync.msg||'')}</div>
+   <div class="row"><button class="btn" onclick="Sync.signIn($('#se').value.trim(),$('#sp').value,false)">Увійти</button><button class="btn sec" onclick="Sync.signIn($('#se').value.trim(),$('#sp').value,true)">Створити акаунт</button></div></div>`;
+}
 function viewSet(){
   const sw=Object.entries(THEMES).map(([k,x])=>`<button class="sw ${Theme.id===k?'on':''}" onclick="setTheme('${k}')"><i style="background:linear-gradient(135deg,${x.b[1]} 45%,${x.a[1]} 46%)"></i>${x.n}</button>`).join('');
   return`<h1>Налаштування</h1>
   <div class="set glass pad"><div class="lbl" style="margin-top:0">ТЕМА</div><div class="sws">${sw}</div>
   <div class="lbl">СВІЙ КОЛІР</div><div class="row"><input type="color" id="cc" value="${Theme.color||'#ff7d12'}" onchange="setColor(this.value)" class="cpick"><span class="hint" style="margin:0">Обери будь-який, фон і акценти підлаштуються</span></div>
   <div class="lbl">ДЕКОР</div><button class="chip ${Theme.orb?'on':''}" onclick="setOrb(${!Theme.orb})">Кола на фоні: ${Theme.orb?'так':'ні'}</button></div>
+  ${Sync.on()?syncHtml():''}
   <div class="set glass pad"><div class="lbl" style="margin-top:0">ДАНІ</div>
   <p style="margin-top:4px">Дані зберігаються на цьому пристрої. Щоб перенести їх або зробити копію — експорт і імпорт.</p>
   <div class="row"><button class="btn" onclick="exportData()">Зберегти копію</button><button class="btn sec" onclick="$('#imp').click()">Завантажити копію</button></div>
   <input id="imp" type="file" accept="application/json" hidden onchange="importData(this.files[0])">
-  <p>Усього записів: ${Store.data.entries.length}</p></div>`;
+  <p>Усього записів: ${Store.data.entries.filter(e=>!e.deleted).length}</p></div>`;
 }
 function shift(n){cur.setDate(cur.getDate()+n);render()}
 function goToday(){cur=new Date();render()}
@@ -226,9 +310,9 @@ function saveEntry(){
   if(!start||!end){alert('Вкажи час');return}
   if(!text&&!window._ed.act){alert('Напиши, що ти робила');return}
   Store.upsert({id:window._ed.id||('e'+Date.now()+Math.random().toString(36).slice(2,6)),date:window._ed.date,start,end,text,mood:moodSel,act:window._ed.act});
-  closeSheet();render();
+  closeSheet();render();Sync.kick();
 }
-function delEntry(id){if(confirm('Видалити запис?')){Store.remove(id);closeSheet();render()}}
+function delEntry(id){if(confirm('Видалити запис?')){Store.remove(id);closeSheet();render();Sync.kick()}}
 function doAct(n){
   const a=ACTS.find(x=>x[0]===n),now=new Date(),before=new Date(now-30*60000);
   const ex=Store.day(ymd(new Date())).find(e=>e.act===n);
@@ -262,12 +346,12 @@ function importData(f){
   r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.entries))throw 0;
     const map=new Map(Store.data.entries.map(e=>[e.id,e]));
     d.entries.forEach(e=>{const o=map.get(e.id);if(!o||(e.updated||0)>(o.updated||0))map.set(e.id,e)});
-    Store.data.entries=[...map.values()];Store.save();render();alert('Готово')}catch(e){alert('Не вдалося прочитати файл')}};
+    Store.data.entries=[...map.values()];Store.save();render();Sync.kick();alert('Готово')}catch(e){alert('Не вдалося прочитати файл')}};
   r.readAsText(f);
 }
 
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render();scrollTo(0,0)});
-render();
+render();Sync.run();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
